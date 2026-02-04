@@ -75,8 +75,8 @@
 
 ## 🛠 기술 스택
 - **Backend**: ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
-- **Frontend**: React  
+!
+- **Frontend**: ![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=Streamlit&logoColor=white) 
 - **Database**: ![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white)
 - **Data**: Pandas  
 - **Infra**: ![Git](https://img.shields.io/badge/Git-F05032?style=for-the-badge&logo=git&logoColor=white)
@@ -92,9 +92,13 @@
 
 ## 📂 프로젝트 구조
 ```bash
-project-root/
-├── backend/
-├── frontend/
+project-root/           
 ├── data/
-├── docs/
-└── README.md
+│   ├── dump.sql              # 테이블 생성 및 데이터 동기화용 DB 쿼리
+├── src/                      # 소스 코드 모듈
+│   ├── __init__.py            
+│   └── database.py           # DB 연결 로직
+├── app.py                    # steamlit 메인 페이지 
+├── requirements.txt          # 필요 라이브러리 목록
+├── .gitignore                
+└── README.md                 # 프로젝트 소개, 설치 및 실행 가이드
