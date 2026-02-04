@@ -16,7 +16,7 @@ config = {
 }
 
 class ParkingLot:
-    def __init__(self, id: int ,reg_id: str, name: str, lat: str, lng: str, sido: str, sigungu: str, full_addr: str, space_no: int, coord: float = None):
+    def __init__(self, id: int ,reg_id: str, name: str, lat: str, lng: str, sido: str, sigungu: str, full_addr: str, space_no: int):
         self.__id = id
         self.__reg_id = reg_id
         self.__name = name
@@ -26,7 +26,6 @@ class ParkingLot:
         self.__sigungu = sigungu
         self.__full_addr = full_addr
         self.__space_no = int(space_no)
-        self.__coord = coord
 
     @property
     def id(self):
@@ -64,18 +63,14 @@ class ParkingLot:
     def space_no(self):
         return self.__space_no
 
-    @property
-    def coord(self):
-        return self.__coord
-
     def __repr__(self):
         return f'ParkingLot:{self.__id}, {self.__reg_id}, {self.__name}, {self.__lat}, {self.__lng}, {self.__sido}, {self.__sigungu}, {self.__full_addr}'
 
 
-API_KEY = os.getenv(("API_KEY"))
+API_KEY = os.getenv("API_KEY")
 BASE_URL = 'https://apis.data.go.kr/B553881/Parking/PrkSttusInfo'
 
-params = {'serviceKey':API_KEY, 'pageNo':1,'numOfRows':2000, 'format':2}
+params = {'serviceKey':API_KEY, 'pageNo':1,'numOfRows':500, 'format':2}
 headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
     'Accept': 'application/json, text/javascript, */*; q=0.01'
@@ -90,7 +85,8 @@ if response.status_code == 200:
 
     if len(parking_lots) > 0:
         for parking_lot in parking_lots:
-            parking_lots_list.append(ParkingLot(None, parking_lot['prk_center_id'], parking_lot['prk_plce_nm'], parking_lot['prk_plce_entrc_la'], parking_lot['prk_plce_entrc_lo'], parking_lot['prk_plce_adres_sido'], parking_lot['prk_plce_adres_sigungu'], parking_lot['prk_plce_adres'], parking_lot['prk_cmprt_co'], None))
+            if parking_lot['prk_plce_entrc_la'] and parking_lot['prk_plce_entrc_lo']:
+                parking_lots_list.append(ParkingLot(None, parking_lot['prk_center_id'], parking_lot['prk_plce_nm'], parking_lot['prk_plce_entrc_la'], parking_lot['prk_plce_entrc_lo'], parking_lot['prk_plce_adres_sido'], parking_lot['prk_plce_adres_sigungu'], parking_lot['prk_plce_adres'], parking_lot['prk_cmprt_co']))
 
 else:
     print('PROBLEM', response.status_code, response.text)
@@ -101,7 +97,7 @@ if len(parking_lots_list) > 0:
         with mysql.connector.connect(**config) as conn:
             with conn.cursor() as cursor:
                 for parking_lot in parking_lots_list:
-                    cursor.execute('''
+                    cursor.execute("""
                         insert
                           into parkinglot (id
                                           , reg_id
@@ -112,6 +108,7 @@ if len(parking_lots_list) > 0:
                                           , sigungu
                                           , full_address
                                           , space_no
+                                          , coord
                                         )
                         values ( %s
                                , %s
@@ -122,8 +119,9 @@ if len(parking_lots_list) > 0:
                                , %s
                                , %s
                                , %s
+                               , ST_GeomFromText(concat('POINT(', %s, ' ', %s, ')'), 4326, 'axis-order=long-lat')
                                )
-                    ''', (None ,parking_lot.reg_id, parking_lot.name, parking_lot.lat, parking_lot.lng, parking_lot.sido, parking_lot.sigungu, parking_lot.full_addr, parking_lot.space_no))
+                    """, (None ,parking_lot.reg_id, parking_lot.name, parking_lot.lat, parking_lot.lng, parking_lot.sido, parking_lot.sigungu, parking_lot.full_addr, parking_lot.space_no, parking_lot.lng, parking_lot.lat))
                 conn.commit()
     except mysql.connector.Error as err:
         print('DB에러: ', err)
