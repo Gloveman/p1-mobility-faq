@@ -4,9 +4,7 @@ from streamlit_folium import st_folium
 import pandas as pd
 import math
 import numpy as np
-
-from findloc import find_address_and_point
-from calculate_distance import calculate_distance
+from folium.plugins import MarkerCluster
 
 ITEMS_PER_PAGE = 4
 
@@ -82,6 +80,7 @@ if not st.session_state.search_result.empty:  # 검색 결과가 나온경우
         st.subheader("📍 주변 지도")
         # 지도 생성
         m = folium.Map(location=[np.mean(result['FCLTY_LA']), np.mean(result['FCLTY_LO'])], zoom_start=13)  # 시군구의 모든 주차장 위도,경도의 평균값을 넣었음
+        cluster = MarkerCluster().add_to(m)
         # 데이터 마커 추가
         for lat, lon, name in zip(result['FCLTY_LA'], result['FCLTY_LO'], result['FCLTY_NM']):  # 각 행의 위도, 경도, 주차장이름 추출
             folium.Marker(
@@ -89,7 +88,7 @@ if not st.session_state.search_result.empty:  # 검색 결과가 나온경우
                 popup=name,             # 주차장 이름
                 tooltip=name,           # 주차장 이름
                 icon=folium.Icon(color="blue", icon="info-sign")
-            ).add_to(m)
+            ).add_to(cluster)
 
         # 지도 렌더링
         clicked_place = st_folium(m, width='100%', height=800)
