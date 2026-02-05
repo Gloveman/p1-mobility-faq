@@ -1,4 +1,5 @@
 import streamlit as st
+from streamlit import session_state
 from streamlit_folium import st_folium
 import folium
 import mysql.connector
@@ -11,6 +12,8 @@ from geopy.geocoders import Nominatim
 from dotenv import load_dotenv
 from src.db_crud import run_query
 from folium.plugins import MarkerCluster
+
+from src.db_crud import get_sido_sigungu
 
 # --- 0. 불필요한 경고 및 출력 억제 ---
 # Pandas의 SQLAlchemy 관련 UserWarning을 무시합니다.
@@ -27,8 +30,6 @@ else:
     st.error("DB 설정 정보를 불러올 수 없습니다.")
 
 # 세션 상태 초기화
-if 'results' not in st.session_state:
-    st.session_state['results'] = pd.DataFrame()
 
 if 'search_result' not in st.session_state:
     st.session_state['search_result'] = pd.DataFrame()
@@ -42,6 +43,8 @@ if 'sgg_name' not in st.session_state:          # 선택된 시군구명 저장
 if 'page' not in st.session_state:
     st.session_state.page = 1
 
+if 'region_data' not in st.session_state: # 시도/시군구 저장해둘 state 변수 - 시도를 key로, 시군구를 value 로
+    st.session_state.region_data = get_sido_sigungu()
 
 # --- 레이아웃 설정 ---
 st.set_page_config(layout="wide", page_title="Parking Mate")
@@ -53,23 +56,27 @@ st.write("---")
 # 1. 입력부: 검색바와 버튼
 # 검색창과 버튼을 나란히 배치하기 위해 컬럼 사용
 col1, col2, col3 = st.columns([0.45, 0.45, 0.1])
-df = pd.DataFrame(run_query('''
-    SELECT name, \
-           lat, \
-           lng, \
-           sido, \
-           sigungu,\
-           full_address, \
-           space_no
-      FROM parking_lot
-     WHERE name like '%주차장%'
-'''))
-print(df)
+@st.cache_data
+def load_all_data():
+    return pd.DataFrame(run_query('''
+        SELECT name, \
+               lat, \
+               lng, \
+               sido, \
+               sigungu,\
+               full_address, \
+               space_no
+          FROM parking_lot
+         WHERE name like '%주차장%'
+    '''))
+df = load_all_data()
+#print(df)
 
 with col1:
     st.session_state.sido_name = col1.selectbox(
         '시도 선택',
-        sorted(df['sido'].unique()),           # 시도명을 가나다순으로 정렬
+        #sorted(df['sido'].unique()),           # 시도명을 가나다순으로 정렬
+        sorted(st.session_state.region_data.keys()), #딕셔너리의 키값들
         index=None,                                 # 처음 선택을 None으로 초기화
         placeholder='시도명을 선택해주세요.',
         label_visibility="collapsed"
@@ -79,7 +86,8 @@ with col2:
         data_sd = df[df['sido'] == st.session_state.sido_name]
         st.session_state.sgg_name = col2.selectbox(
             '시군구 선택',
-            sorted(data_sd['sigungu'].unique()),  # 시군구명을 가나다순으로 정렬
+        #    sorted(data_sd['sigungu'].unique()),  # 시군구명을 가나다순으로 정렬
+            sorted(st.session_state.region_data[st.session_state.sido_name]), # 딕셔너리 값 조회
             index=None,                             # 처음 선택을 None으로 초기화
             placeholder='시군구명을 선택해주세요.',
             label_visibility="collapsed"
@@ -97,7 +105,7 @@ with col3:
     search_btn = st.button("검색", use_container_width=True)
     if st.session_state.sido_name and st.session_state.sgg_name and search_btn:     # 시도명, 시군구명, 버튼 클릭이 모두 충족되는 경우
         st.session_state.search_result = data_sd[data_sd['sigungu'] == st.session_state.sgg_name] # 결과 값에 시군구명까지 필터링한 데이터 저장
-        print(st.session_state.search_result)
+#        print(st.session_state.search_result)
 
 
 # --- 하단 구현 ---
@@ -112,11 +120,9 @@ with left_col:
     if not df.empty:
         items_per_page = 5
         total_pages = min(math.ceil(len(df) / items_per_page), 5)
-
         start_idx = (st.session_state.page - 1) * items_per_page
         end_idx = start_idx + items_per_page
         df_page = df.iloc[start_idx:end_idx]
-
         for i, row in df_page.iterrows():
             st.markdown(f"""
             <div style="border:1px solid #ddd; padding:15px; border-radius:10px; margin-bottom:10px; background-color:white;">
@@ -125,7 +131,6 @@ with left_col:
                 <p style="margin:0; color:#007BFF; font-weight:bold;">🅿️ 주차면수: {row['space_no']}면</p>
             </div>
             """, unsafe_allow_html=True)
-
         st.write("---")
         cols = st.columns([1] * (total_pages + 2))
         for p in range(1, total_pages + 1):
@@ -142,6 +147,7 @@ with right_col:
     # 지도 표시
     center_lat, center_lng = (df.iloc[0]['lat'], df.iloc[0]['lng']) if not df.empty else (37.5665, 126.9780)
     m = folium.Map(location=[center_lat, center_lng], zoom_start=14 if not df.empty else 12)
+
     cluster = MarkerCluster().add_to(m)
 
     for i, row in df.iterrows():
@@ -149,6 +155,6 @@ with right_col:
             location=[row['lat'], row['lng']],
             popup=f"<b>{row['name']}</b><br>면수: {row['space_no']}면",
             icon=folium.Icon(color='orange', icon='info-sign')
-        ).add_to(cluster)
+         ).add_to(cluster)
 
     st_folium(m, width="100%", height=600, key="main_map", returned_objects=[])
