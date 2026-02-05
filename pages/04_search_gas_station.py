@@ -1,7 +1,7 @@
 import streamlit as st
 from streamlit_folium import st_folium
 import folium
-import pandas as pd
+import math
 import os
 import requests
 from pyproj import Transformer
@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 
 from folium.plugins import MarkerCluster
 
+ITEMS_PER_PAGE = 4
 # 1. 환경 설정 및 API 키 로드
 load_dotenv()
 OPINET_KEY = os.getenv("OPINET")
@@ -39,6 +40,9 @@ if 'oil_results' not in st.session_state:
 if 'map_center' not in st.session_state:
     st.session_state['map_center'] = [37.5665, 126.9780]  # 서울 시청 기준
 
+if "list_result_current_page" not in st.session_state: #리스트에서 현재 탐색중인 페이지
+    st.session_state.list_result_current_page = 1
+
 
 # 3. 데이터 호출 함수
 def get_oil_stations(lat, lon, radius=3000):
@@ -51,7 +55,7 @@ def get_oil_stations(lat, lon, radius=3000):
         "y": ky,
         "radius": radius,
         "prodcd": "B027",  # 휘발유 기준
-        "sort": 1  # 거리순
+        "sort": 2  # 거리순
     }
     try:
         res = requests.get(url, params=params)
@@ -77,8 +81,14 @@ stations = st.session_state['oil_results']
 # --- 왼쪽 영역: 검색 결과 리스트 ---
 with left_col:
     st.subheader(f"🔍 주변 주유소 ({len(stations)}건)")
+    st.write("---")
     if stations:
-        for s in stations:
+        total_items = len(stations)
+        total_pages = math.ceil(total_items / ITEMS_PER_PAGE)
+        start_idx = (st.session_state.list_result_current_page - 1) * ITEMS_PER_PAGE
+        end_idx = start_idx + ITEMS_PER_PAGE
+        page_data = stations[start_idx:end_idx]
+        for s in page_data:
             with st.container():
                 st.markdown(f"""
                 <div style="border:1px solid #ddd; padding:15px; border-radius:10px; margin-bottom:10px; background-color:white;">
@@ -87,6 +97,30 @@ with left_col:
                     <p style="margin:0; font-size:13px; color:#666;">📏 거리: {s['DISTANCE']}m</p>
                 </div>
                 """, unsafe_allow_html=True)
+        col_prev, col_page, col_next = st.columns([1, 2, 1])
+        with col_prev:
+            is_first = st.session_state.list_result_current_page == 1
+            if st.button("⬅️ 이전", use_container_width=True, disabled=is_first):
+                st.session_state.list_result_current_page -= 1
+                st.rerun()
+
+        with col_page:
+            st.markdown(
+                f"""
+                            <div style="text-align: center; background-color: #f0f2f6; border-radius: 8px; padding: 4px;">
+                                <span style="font-size: 0.9rem; color: #555;">Page</span><br>
+                                <strong style="font-size: 1.2rem; color: #007BFF;">{st.session_state.list_result_current_page}</strong> 
+                                <span style="color: #999;">/ {total_pages}</span>
+                            </div>
+                            """,
+                unsafe_allow_html=True
+            )
+
+        with col_next:
+            is_last = st.session_state.list_result_current_page == total_pages
+            if st.button("다음 ➡️", use_container_width=True, disabled=is_last):
+                st.session_state.list_result_current_page += 1
+                st.rerun()
     else:
         st.info("오른쪽 검색창에서 동네 이름이나 주소를 검색해 보세요!")
 
@@ -129,9 +163,36 @@ with right_col:
 
     # 주변 주유소 마커
     for s in stations:
+        # 출발지 정보: 사용자가 검색한 주소와 좌표
+        # 목적지 정보: 주유소 이름과 좌표
+        start_name = address_input if address_input else "내 검색 위치"
+        start_lat, start_lon = st.session_state['map_center']
+
+        # 카카오맵 길찾기 'dir' 파라미터 구성
+        # sp: 출발지 좌표 및 이름, ep: 목적지 좌표 및 이름
+        kakao_dir_url = (
+            f"https://map.kakao.com/link/from/{start_name},{start_lat},{start_lon}"
+            f"/to/{s['OS_NM']},{s['lat']},{s['lng']}"
+        )
+
+        popup_html = f"""
+            <div style="width:220px; font-family: 'Nanum Gothic', sans-serif; line-height:1.5;">
+                <h4 style="margin:0 0 5px 0; color:#333;">{s['OS_NM']}</h4>
+                <div style="font-size:13px; color:#666; margin-bottom:10px;">
+                    <b>가격:</b> <span style="color:#ff4b4b; font-weight:bold;">{int(s['PRICE']):,}원</span><br>
+                    <b>브랜드:</b> {s['brand_nm']}<br>
+                    <b>거리:</b> {s['DISTANCE']}m
+                </div>
+                <a href="{kakao_dir_url}" target="_blank" 
+                   style="display:block; text-align:center; padding:8px; background-color:#FAE100; color:#3C1E1E; text-decoration:none; border-radius:5px; font-size:13px; font-weight:bold;">
+                   🚕 자동으로 길찾기 시작
+                </a>
+            </div>
+            """
+
         folium.Marker(
             location=[s['lat'], s['lng']],
-            popup=f"<b>{s['OS_NM']}</b><br>가격: {s['PRICE']}원",
+            popup=folium.Popup(popup_html, max_width=300),
             tooltip=f"{s['OS_NM']} ({s['PRICE']}원)",
             icon=folium.Icon(color='blue', icon='oil-can', prefix='fa')
         ).add_to(cluster)
