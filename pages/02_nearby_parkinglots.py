@@ -1,3 +1,5 @@
+import warnings
+
 import streamlit as st
 from streamlit_folium import st_folium
 import folium
@@ -11,7 +13,8 @@ ITEMS_PER_PAGE = 4
 
 # 1. 페이지 설정
 st.set_page_config(layout="wide", page_title="Parking Mate")
-
+# 불필요한 경고 출력 무시
+warnings.filterwarnings('ignore', category=UserWarning)
 # 글자 깨짐 등 해결
 st.markdown("""
     <style>
