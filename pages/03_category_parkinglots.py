@@ -42,8 +42,8 @@ if 'sido_name' not in st.session_state:         # 선택된 시도명 저장
 if 'sgg_name' not in st.session_state:          # 선택된 시군구명 저장
     st.session_state.sgg_name = ""
 
-if 'page' not in st.session_state:
-    st.session_state.page = 1
+if 'current_page' not in st.session_state:
+    st.session_state.current_page = 1
 
 if 'region_data' not in st.session_state: # 시도/시군구 저장해둘 state 변수 - 시도를 key로, 시군구를 value 로
     st.session_state.region_data = get_sido_sigungu()
@@ -74,10 +74,16 @@ with left_col:
 
         # 2. 페이지네이션 설정
         items_per_page = 4
-        total_pages = min(math.ceil(len(df) / items_per_page), 4)
-        start_idx = (st.session_state.page - 1) * items_per_page
+        total_pages = math.ceil(len(df) / items_per_page)
+
+        current_group = (st.session_state.current_page - 1) // 5
+        start_page = current_group * 5 + 1
+        end_page = min(start_page + 4, total_pages)
+
+        start_idx = (st.session_state.current_page - 1) * items_per_page
         end_idx = start_idx + items_per_page
         df_page = df.iloc[start_idx:end_idx]
+
         for i, row in df_page.iterrows():
             st.markdown(f"""
             <div style="border:1px solid #ddd; padding:15px; border-radius:10px; margin-bottom:10px; background-color:white;">
@@ -87,13 +93,29 @@ with left_col:
             </div>
             """, unsafe_allow_html=True)
         st.write("---")
-        cols = st.columns([1] * (total_pages + 2))
-        for p in range(1, total_pages + 1):
-            with cols[p]:
-                btn_type = "primary" if st.session_state.page == p else "secondary"
-                if st.button(str(p), key=f"p_{p}", type=btn_type, use_container_width=True):
-                    st.session_state.page = p
+
+        # [3] 화살표 + 숫자 5개 버튼 UI (겹침 방지 비율 적용)
+        page_cols = st.columns([1.1, 1, 1, 1, 1, 1, 1.5])
+
+        with page_cols[0]:
+            if current_group > 0:
+                if st.button("◀", key="prev_group"):
+                    st.session_state.current_page = start_page - 1
                     st.rerun()
+
+        for i, p in enumerate(range(start_page, end_page + 1)):
+            with page_cols[i + 1]:
+                btn_type = "primary" if st.session_state.current_page == p else "secondary"
+                if st.button(str(p), key=f"p_{p}", type=btn_type, use_container_width=True):
+                    st.session_state.current_page = p
+                    st.rerun()
+
+        with page_cols[6]:
+            if end_page < total_pages:
+                if st.button("▶", key="next_group"):
+                    st.session_state.current_page = end_page + 1
+                    st.rerun()
+
     else:
         st.info("위 선택창에서 원하는 위치를 선택해 보세요!")
 
@@ -142,7 +164,7 @@ with right_col:
                         (all_data['sigungu'] == st.session_state.sgg_name)
                         ]
                     st.session_state.search_result = res
-                    st.session_state.page = 1  # 검색 시 리스트 페이지 초기화
+                    st.session_state.current_page = 1  # 검색 시 리스트 페이지 초기화
 
                     # ⭐ 핵심: 데이터를 세션에 넣은 후 즉시 리런!
                     st.rerun()
