@@ -22,7 +22,7 @@
     <td align="center"><b>홍지윤</b></td>
   </tr>
   <tr>
-    <td align="center">PM</td>
+    <td align="center">PM/FULL STACK</td>
     <td align="center">FRONT</td>
     <td align="center">FRONT</td>
     <td align="center">DB/BACK</td>
@@ -93,7 +93,7 @@ project-root/
 ├── pages/                            # README 프로필 이미지
 │   ├── 01_entry_page.py              # main page
 │   ├── 02_nearby_parkinglots.py      # 목적지 주변 주차장 조회 페이지
-│   ├── 03_prototype_category_app.py  # 지역별 주차장 조회 페이지
+│   ├── 03_category_parkinglots.py  # 지역별 주차장 조회 페이지
 │   ├── 04_search_gas_station.py      # 검색 장소 주변 주유소 조회 페이지
 │   └── 05_search_parking_gas.py      # 주차장 & 주유소 통합 조회 페이지
 ├── prototype/                        # 실험적 기능 작성용
