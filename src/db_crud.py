@@ -31,7 +31,7 @@ def get_near_parking_data(_dest: Destination):
         min_lng, max_lng = _dest.lng - delta, _dest.lng + delta
 
         sql = '''SELECT id, reg_id, name, lat, lng, sido, sigungu, full_address, space_no, use_yn, ST_Distance_Sphere(POINT(lng, lat), POINT(%s, %s)) as dist FROM parking_lot WHERE MBRContains(ST_GeomFromText(%s, 4326, 'axis-order=long-lat'), coord) 
-                 and use_yn = 'Y'
+                 and use_yn = 'Y' order by dist
               '''
         polygon_str = get_mbr_polygon(min_lng, min_lat, max_lng, max_lat)
         with conn.cursor(dictionary=True) as cursor:
