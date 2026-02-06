@@ -1,7 +1,6 @@
 import streamlit as st
 from streamlit_folium import st_folium
 import folium
-from folium.plugins import MarkerCluster
 import math
 import urllib
 
@@ -16,23 +15,39 @@ st.set_page_config(layout="wide", page_title="Parking Mate")
 # 글자 깨짐 등 해결
 st.markdown("""
     <style>
-    /* 버튼 내부 글자 줄바꿈 방지 */
+    /* 1. 버튼 및 컬럼 디자인 (기존 유지) */
     div.stButton > button p {
         white-space: nowrap !important;
         font-size: 14px !important;
     }
-    /* 버튼 간격 및 최소 너비 최적화 */
     div.stButton > button {
         min-width: 35px !important; 
         width: 100% !important;
         padding: 0px !important;
         margin: 0px 2px !important; 
     }
-    /* 컬럼 간격 미세 조정 */
     [data-testid="column"] {
         padding-left: 1px !important;
         padding-right: 1px !important;
     }
+
+    /* 2. 지도를 감싸는 가장 바깥쪽 리테이너 타겟팅 */
+    [data-testid="stVerticalBlock"] > div:has(iframe) {
+        margin-top: -2px !important; /
+    }
+
+    /* 3. 지도 자체 프레임 조절 */
+    iframe {
+        border-radius: 15px !important;
+        border: 1px solid #ddd !important;
+        margin-top: -5px !important; /* 내부에서 한 번 더 올림 */
+    }
+
+    /* 4. st_folium 컨테이너 내부 여백 제거 */
+    .element-container:has(iframe) {
+        margin-bottom: -10px !important;
+    }
+
     </style>
 """, unsafe_allow_html=True)
 
@@ -40,10 +55,10 @@ st.markdown("""
 if 'search_results' not in st.session_state:
     st.session_state.search_results = []
 
-if "current_page" not in st.session_state: #리스트에서 현재 탐색중인 페이지
+if "current_page" not in st.session_state:  # 리스트에서 현재 탐색중인 페이지
     st.session_state.current_page = 1
 
-if "destination" not in st.session_state: #검색 결과
+if "destination" not in st.session_state:  # 검색 결과
     st.session_state.destination = None
 
 # --- 레이아웃 시작 ---
@@ -51,10 +66,9 @@ if "destination" not in st.session_state: #검색 결과
 # 4. 상단 로고 (검색바는 아래 right_col로 이동)
 st.title("🚗 Parking Mate")
 st.write("---")
-st.subheader(f"🔍 검색 결과 ({len(st.session_state.search_results) if len(st.session_state.search_results)>0 else 0}건)")
+st.subheader(f"🔍 검색 결과 ({len(st.session_state.search_results) if len(st.session_state.search_results) > 0 else 0}건)")
 # 5. 메인 레이아웃 분할: 왼쪽(리스트) | 오른쪽(검색창 + 지도)
 left_col, right_col = st.columns([1, 2])
-
 
 # --- 오른쪽 영역: 검색창(상단) + 지도(하단) ---
 with right_col:
@@ -83,7 +97,7 @@ with right_col:
             st.warning("검색어를 입력해 주세요.")
 
     # 지도 표시 로직
-    if st.session_state.search_results and len(st.session_state.search_results)>0:
+    if st.session_state.search_results and len(st.session_state.search_results) > 0:
         # 데이터가 있을 때 첫 번째 검색 결과 위치로 이동
         center_lat = st.session_state.search_results[0].lat
         center_lng = st.session_state.search_results[0].lng
@@ -93,14 +107,15 @@ with right_col:
         zoom_level = 12
 
     m = folium.Map(location=[center_lat, center_lng], zoom_start=zoom_level)
-    cluster = MarkerCluster().add_to(m)
     # 목적지 마커 추가
+
+    # 주차장 마커 추가
     if st.session_state.destination:
         dest = st.session_state.destination
         folium.Marker(
             location=[dest.lat, dest.lng],
             icon=folium.Icon(color="red", icon="star")
-        ).add_to(cluster)
+        ).add_to(m)
 
     # 주차장 마커 추가
     for parking_lot in st.session_state.search_results:
@@ -143,11 +158,9 @@ with right_col:
             location=[parking_lot.lat, parking_lot.lng],
             popup=folium.Popup(popup_html, max_width=300),
             icon=folium.Icon(color='blue', icon='info-sign')
-        ).add_to(cluster)
+        ).add_to(m)
 
     st_folium(m, width="100%", height=600, key="main_map", returned_objects=[])
-
-
 
 # --- 왼쪽 영역: 검색 결과 리스트 ---
 with left_col:
@@ -163,10 +176,10 @@ with left_col:
         start_idx = (st.session_state.current_page - 1) * ITEMS_PER_PAGE
         end_idx = start_idx + ITEMS_PER_PAGE
 
-        if sort_option== '가까운순 ▼':
+        if sort_option == '가까운순 ▼':
             page_data = st.session_state.search_results[start_idx:end_idx]
-        elif sort_option== '이름순▼':
-            page_data = sorted(st.session_state.search_results, key=lambda x:x.name, reverse=True)[start_idx:end_idx]
+        elif sort_option == '이름순▼':
+            page_data = sorted(st.session_state.search_results, key=lambda x: x.name, reverse=True)[start_idx:end_idx]
         else:
             page_data = sorted(st.session_state.search_results, key=lambda x: x.name)[start_idx:end_idx]
 
