@@ -7,6 +7,7 @@ import pandas as pd
 import os
 import json
 import math
+import urllib
 import warnings  # 👈 경고 메시지 제어를 위해 추가
 from geopy.geocoders import Nominatim
 from dotenv import load_dotenv
@@ -154,11 +155,35 @@ with right_col:
 
     cluster = MarkerCluster().add_to(m)
 
+    # 주차장 마커 추가
     for i, row in df.iterrows():
+        # 1. 좌표 및 이름 설정
+        e_name = urllib.parse.quote(row['name'])
+
+        # 2. 카카오맵 URL 생성
+        kakao_dir_url = (
+            f"https://map.kakao.com/link/to/{e_name},{row['lat']},{row['lng']}"
+        )
+
+        # 3. 팝업 HTML (row 데이터 사용 및 태그 정리)
+        popup_html = f"""
+                <div style="width:220px; font-family: sans-serif; line-height:1.5;">
+                    <h4 style="margin:0; color:#333;">{row['name']}</h4>
+                    <div style="font-size:13px; color:#666; margin: 10px 0;">
+                        <b>📍 주소:</b> {row['full_address']}<br>
+                        <b>🅿️ 주차면수:</b> <span style="color:#007BFF; font-weight:bold;">{row['space_no']}면</span>
+                    </div>
+                    <a href="{kakao_dir_url}" target="_blank" 
+                       style="display:block; text-align:center; padding:8px; background-color:#FAE100; color:#3C1E1E; text-decoration:none; border-radius:5px; font-size:13px; font-weight:bold;">
+                       🚕 카카오맵 길찾기
+                    </a>
+                </div>
+                """
+
         folium.Marker(
             location=[row['lat'], row['lng']],
-            popup=f"<b>{row['name']}</b><br>면수: {row['space_no']}면",
-            icon=folium.Icon(color='orange', icon='info-sign')
-         ).add_to(cluster)
+            popup=folium.Popup(popup_html, max_width=300),
+            icon=folium.Icon(color='blue', icon='info-sign')
+        ).add_to(cluster)
 
-    st_folium(m, width="100%", height=600, key="main_map", returned_objects=[])
+    st_folium(m, width="100%", height=600, key="main_map")
