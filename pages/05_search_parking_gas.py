@@ -105,7 +105,7 @@ def get_oil_stations(lat, lon, radius=3000):
         st.error(f"오피넷 API 오류: {e}")
         return []
 
-# todo: 주차장 리스트 표시
+
 def parking_spot(page_data_parking):
     for parking_lot in page_data_parking:
         with st.container():
@@ -117,7 +117,7 @@ def parking_spot(page_data_parking):
             </div>
             """, unsafe_allow_html=True)
 
-# todo: 주유소 리스트 표시
+
 def oil_spot(oil_data_parking):
     for s in page_data_oil:
         with st.container():
@@ -223,12 +223,11 @@ with right_col:
             st.warning("검색어를 입력해 주세요.")
 
     # 지도 표시 로직
-    # todo: 전체를 선택했을 때 map 표시 (parking(하늘색 마커) + oil(초록색 마커))
     if option == "전체":
         if st.session_state.parking_results or st.session_state.oil_results:
             # 데이터가 있을 때 첫 번째 검색 결과 위치로 이동
-            center_lat = st.session_state.parking_results[0].lat
-            center_lng = st.session_state.parking_results[0].lng
+            center_lat = st.session_state.destination.lat
+            center_lng = st.session_state.destination.lng
             zoom_level = 14
         else:
             center_lat, center_lng = 37.5665, 126.9780  # 서울 기본 위치
@@ -322,12 +321,11 @@ with right_col:
                 icon=folium.Icon(color='green', icon='tint', prefix='fa')
             ).add_to(cluster)
 
-    # todo: '주차장' 선택했을 때 map 표시 (parking, 파란색 마커)
     if option == '주차장':
         if st.session_state.parking_results and len(st.session_state.parking_results) > 0:
             # 데이터가 있을 때 첫 번째 검색 결과 위치로 이동
-            center_lat = st.session_state.parking_results[0].lat
-            center_lng = st.session_state.parking_results[0].lng
+            center_lat = st.session_state.destination.lat
+            center_lng = st.session_state.destination.lng
             zoom_level = 14
         else:
             center_lat, center_lng = 37.5665, 126.9780  # 서울 기본 위치
@@ -386,12 +384,11 @@ with right_col:
                 icon=folium.Icon(color='blue', icon='info-sign')
             ).add_to(cluster)
 
-    # todo: '주유소' 선택했을 때 map 표시 (oil, 초록색 마커)
     if option == '주유소':
-        if st.session_state.parking_results or st.session_state.oil_results:
+        if st.session_state.oil_results and len(st.session_state.oil_results) > 0:
             # 데이터가 있을 때 첫 번째 검색 결과 위치로 이동
-            center_lat = st.session_state.parking_results[0].lat
-            center_lng = st.session_state.parking_results[0].lng
+            center_lat = st.session_state.destination.lat
+            center_lng = st.session_state.destination.lng
             zoom_level = 14
         else:
             center_lat, center_lng = 37.5665, 126.9780  # 서울 기본 위치
