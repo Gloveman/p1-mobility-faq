@@ -5,7 +5,7 @@ import streamlit as st
 entry_p = st.Page("pages/01_entry_page.py", title="홈", icon="🏠", default=True)
 nearby_parking_p = st.Page("pages/02_nearby_parkinglots.py", title="Parking Mate", icon="🅿️")
 parking_by_region_p = st.Page("pages/03_prototype_category_app.py", title="Parking Lot by region", icon="🅿️")
-search_gas_station_p =  st.Page("pages/04_search_gas_station.py", title="Gas Station Mate", icon="⛽")
+search_gas_station_p =  st.Page("pages/04_search_gas_station.py", title="Oil Mate", icon="⛽")
 search_parking_gas_p = st.Page("pages/05_search_parking_gas.py", title="Parking and Oil Mate", icon="🔍")
 
 # 내비게이션 실행

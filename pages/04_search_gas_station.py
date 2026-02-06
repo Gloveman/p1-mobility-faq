@@ -36,7 +36,7 @@ with left_col:
     sort_option = st.radio("", ["가까운순▼", "가격낮은순▼", "이름순▲", "이름순▼"], horizontal=True)
     if stations:
         # 정렬 라디오 버튼 (이 코드가 subheader 바로 아래 있어야 화면에 뜹니다)
-        st.write("---")
+        # st.write("---")
 
         # ---------------- 2. 필터 정렬 로직 (stations 리스트 직접 정렬) ----------------
         if sort_option == '가까운순▼':
@@ -171,7 +171,7 @@ with right_col:
         folium.Marker(
             location=[s.lat, s.lng],
             popup=folium.Popup(popup_html, max_width=300),
-            icon=folium.Icon(color='blue', icon='tilt', prefix='fa')
+            icon=folium.Icon(color='green', icon='info', prefix='fa')
         ).add_to(cluster)
 
     st_folium(m, width="100%", height=600, key="oil_map", returned_objects=[])
